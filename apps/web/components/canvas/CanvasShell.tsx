@@ -733,7 +733,7 @@ export function CanvasShell({ id }: { id: string }) {
         <Sidebar currentId={id} onSearch={() => setPalette({ open: true })} />
         <div className="main">
           <header className="topbar">
-            <input className="topbar-title" value={doc.title} aria-label="Canvas title" onChange={(e) => update((d) => ({ ...d, title: e.target.value }), false)} />
+            <input className="topbar-title" value={doc.title} size={Math.max(doc.title.length, 4)} aria-label="Canvas title" onChange={(e) => update((d) => ({ ...d, title: e.target.value }), false)} />
             <span className="hint">{saved ? "Saved" : "Saving…"}</span>
             <div className="grow" />
             <div className="zoom" aria-label="Zoom">
