@@ -1,6 +1,7 @@
 "use client";
 // Canvas list / home (wireframe 2d): rail of views, grid of canvas cards with a
 // rename/delete menu, "+ New canvas" card.
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createCanvas, deleteCanvas, listCanvases, loadCanvas, renameCanvas, type CanvasMeta } from "../lib/store";
@@ -111,6 +112,8 @@ export function Home() {
         {VIEWS.map((v) => (
           <button key={v} className="rail-item" aria-current={view === v ? "page" : undefined} onClick={() => setView(v)}>{v}</button>
         ))}
+        <div className="grow" />
+        <Link className="rail-item" href="/settings">Settings</Link>
       </aside>
       <main className="home-main">
         <div className="home-head">

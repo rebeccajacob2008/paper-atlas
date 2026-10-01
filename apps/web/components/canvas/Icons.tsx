@@ -12,6 +12,7 @@ const S = (p: { children: React.ReactNode } & P) => (
 export const CursorIcon = (p: P) => <S {...p}><path d="M5 3l6.5 16 2.2-6.3L20 10.5 5 3z" /></S>;
 export const HandIcon = (p: P) => <S {...p}><path d="M9 11V5.5a1.5 1.5 0 013 0V11m0-1V4.5a1.5 1.5 0 013 0V11m0-.5V6.5a1.5 1.5 0 013 0V14a6 6 0 01-6 6h-1a6 6 0 01-6-6v-3a1.5 1.5 0 013 0" /></S>;
 export const PlusIcon = (p: P) => <S {...p}><path d="M12 5v14M5 12h14" /></S>;
+export const ChevronDownIcon = (p: P) => <S {...p}><path d="M6 9l6 6 6-6" /></S>;
 export const SearchIcon = (p: P) => <S {...p}><circle cx="11" cy="11" r="6.5" /><path d="M16 16l4 4" /></S>;
 export const FileIcon = (p: P) => <S {...p}><path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8l-5-5z" /><path d="M14 3v5h5" /></S>;
 export const TextIcon = (p: P) => <S {...p}><path d="M5 6h14M9 6v13" /></S>;
