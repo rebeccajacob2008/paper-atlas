@@ -115,7 +115,7 @@ export function TopicPicker({ picked, onChange }: { picked: Topic[]; onChange: (
       <div className="onboard-body">
         {error && (
           <p className="hint" role="alert">
-            Couldn't load topics: {error}{" "}
+            Couldn&rsquo;t load topics: {error}{" "}
             <button className="btn" onClick={loadFields}>Retry</button>
           </p>
         )}
