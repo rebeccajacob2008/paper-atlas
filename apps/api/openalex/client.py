@@ -220,7 +220,7 @@ class OpenAlexProvider:
 
     # ---- topic hierarchy (domain -> field -> subfield -> topic) ----
 
-    def taxonomy(self, level: str, parent_id: str | None = None, *, per_page: int = 60) -> list[dict[str, Any]]:
+    def taxonomy(self, level: str, parent_id: str | None = None, *, per_page: int = 200) -> list[dict[str, Any]]:
         """Browse OpenAlex's own classification: fields, then subfields, then
         topics. Used by onboarding so interests come from the real corpus
         instead of a hand-written list that would drift."""

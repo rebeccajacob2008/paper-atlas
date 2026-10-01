@@ -59,7 +59,7 @@ export const api = {
     if (o.level) p.set("level", o.level);
     if (o.parent) p.set("parent", o.parent);
     if (o.q) p.set("q", o.q);
-    return fetch(`${BASE}/topics?${p}`).then((r) => r.json());
+    return fetch(`${BASE}/topics?${p}`).then((r) => (r.ok ? r.json() : fail("/topics", r)));
   },
   random: (topic?: string): Promise<SearchResponse> =>
     fetch(`${BASE}/random${topic ? `?topic=${encodeURIComponent(topic)}` : ""}`).then((r) => r.json()),
