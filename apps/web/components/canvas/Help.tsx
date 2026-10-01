@@ -7,15 +7,16 @@ const SECTIONS: { title: string; items: [string, string][] }[] = [
   {
     title: "Toolbar",
     items: [
-      ["↖", "Select. Drag on empty space to marquee-select; hold space or middle-drag to pan."],
-      ["▭", "Group the selected objects into a frame."],
-      ["╱", "Straight line connector — the style used for links you draw next."],
+      ["↖", "Select. Drag left→right to select objects fully inside the box; drag right→left to select anything it touches. Hold space or middle-drag to pan."],
+      ["▭", "Group mode: select objects, then confirm to frame them as a group. ⌘G groups the current selection at once."],
+      ["╱", "Line tool: drag from one object to another to link them. Esc returns to select."],
       ["→", "Curved arrow, one direction."],
       ["↔", "Curved arrow, both directions."],
       ["✎", "New note."],
       ["⇪", "Upload a file — PDF, image, video, audio, slides, spreadsheet."],
       ["+", "Add anything: search OpenAlex, upload, embed a link, or write a note."],
       ["✦", "Ask AI about this canvas."],
+      ["┃", "Pull tabs on each side panel's edge: click to open or close, drag to resize."],
     ],
   },
   {

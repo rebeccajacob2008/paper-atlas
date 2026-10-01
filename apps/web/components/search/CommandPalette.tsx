@@ -127,10 +127,11 @@ export function CommandPalette({ nodes, actions, onFocusNode, onAdd, onClose, in
             </>
           )}
         </div>
-        <div className="palette-foot">
-          {remote.length >= limit && state !== "loading" && (
+        {remote.length >= limit && state !== "loading" && (
+          <div className="palette-foot">
             <button className="chip click" onClick={() => setLimit((n) => n + 10)}>Show more</button>
-          )}Previews — nothing lands on the board until you add it</div>
+          </div>
+        )}
       </div>
     </div>
   );

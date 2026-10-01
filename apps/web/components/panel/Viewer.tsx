@@ -134,7 +134,7 @@ export function Viewer({ node, edges, pdfUrl, onSelectionAction, onAction }: {
           </div>
         ) : (tab === "References" || tab === "Cited by") && p ? (
           cites.loading ? <div className="empty">Loading {tab.toLowerCase()}…</div>
-            : cites.items.length === 0 ? <div className="empty">OpenAlex lists no {tab.toLowerCase()} for this work.</div>
+            : cites.items.length === 0 ? <div className="empty">None</div>
             : (
               <ul className="citelist">
                 {cites.items.map((c) => (
@@ -161,7 +161,7 @@ export function Viewer({ node, edges, pdfUrl, onSelectionAction, onAction }: {
             })()}
           </div>
         ) : (
-          <div className="empty">{p ? "Abstract not available — metadata only." : "Nothing to read here."}</div>
+          <div className="empty">{p ? "No abstract" : "Nothing to read"}</div>
         )}
         {edges.length > 0 && (
           <dl className="kv">

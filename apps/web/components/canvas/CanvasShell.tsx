@@ -5,7 +5,7 @@
 // that creates a persistent object or edge also hits the API so ids are stable.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactFlow, {
-  Background, BackgroundVariant, MarkerType, MiniMap, applyEdgeChanges, applyNodeChanges, useReactFlow,
+  Background, BackgroundVariant, ConnectionMode, MarkerType, MiniMap, SelectionMode, applyEdgeChanges, applyNodeChanges, useReactFlow,
   type Connection, type Edge, type EdgeChange, type Node, type NodeChange, type Viewport,
 } from "reactflow";
 import "reactflow/dist/style.css";
@@ -17,6 +17,7 @@ import { Sidebar } from "../Sidebar";
 import { BoardActionsContext, type BoardActions } from "./actions";
 import { MicIcon, ArrowIcon, BiArrowIcon, CursorIcon, EmbedIcon, FileIcon, GroupIcon, HandIcon, HelpIcon, LineIcon, PaperIcon, PlusIcon, SparkIcon, StickyIcon, TextIcon, ThreadIcon, WikiIcon } from "./Icons";
 import { Help } from "./Help";
+import { Dock } from "./Dock";
 import { Lightbox } from "../panel/Lightbox";
 import { EmptyState } from "./EmptyState";
 import { PaperNode } from "../nodes/PaperNode";
@@ -61,6 +62,14 @@ function toNode(kind: NodeKind, object: CanvasObject, extra: Partial<NodeData> =
 function toEdge(id: string, source: string, target: string, edgeType: EdgeData["edgeType"], provenance: EdgeData["provenance"], ghost = false): Edge<EdgeData> {
   return { id, source, target, data: { edgeType, provenance }, className: ghost ? "ghost" : undefined, markerEnd: { type: MarkerType.Arrow, width: 16, height: 16, color: ghost ? "#9ec8f5" : "#c7c7cc" } };
 }
+type Connector = "line" | "arrow" | "biarrow";
+// How a drawn link looks for each line tool.
+function connectorStyle(c: Connector): Partial<Edge> {
+  const head = { type: MarkerType.ArrowClosed, width: 16, height: 16, color: "#c7c7cc" };
+  return { type: c === "line" ? "straight" : "default", markerEnd: c === "line" ? undefined : head, markerStart: c === "biarrow" ? head : undefined };
+}
+// The board never gets narrower than this; side panels give way first.
+const MIN_BOARD = 480;
 const kindOf = (o: CanvasObject): NodeKind => (o.objectType === "AI_SUMMARY" ? "ai" : o.content.filename ? "pdf" : (o.objectType.toLowerCase() as NodeKind));
 
 export function CanvasShell({ id }: { id: string }) {
@@ -69,14 +78,24 @@ export function CanvasShell({ id }: { id: string }) {
   const [zoom, setZoom] = useState(1);
   const [tab, setTab] = useState<PanelTab>("Objects");
   const [panelOpen, setPanelOpen] = useState(true);
+  const [panelW, setPanelW] = useState(300);
+  const [railOpen, setRailOpen] = useState(true);
+  const [railW, setRailW] = useState(216);
   // Connector style for new links: straight line, one-sided curved arrow, or
   // two-sided. Applied to edges the user draws.
-  const [connector, setConnector] = useState<"line" | "arrow" | "biarrow">("arrow");
+  const [connector, setConnector] = useState<Connector>("arrow");
   const boardRef = useRef<HTMLDivElement>(null);
   const seeded = useRef(false);
   // Interim speech, shown grey above the field until it is committed.
   const [partial, setPartial] = useState("");
-  const [tool, setTool] = useState<"select" | "pan">("select");
+  // "group" is select with intent: the next selection is offered as a group.
+  // "connect" draws links in the current connector style from anywhere on a node.
+  const [tool, setTool] = useState<"select" | "pan" | "group" | "connect">("select");
+  const [winW, setWinW] = useState(1440);
+  // Marquee direction: left→right selects only what is fully enclosed,
+  // right→left anything the box touches (the CAD convention).
+  const [crossing, setCrossing] = useState(false);
+  const [connecting, setConnecting] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [lightboxId, setLightboxId] = useState<string | null>(null);
@@ -114,6 +133,7 @@ export function CanvasShell({ id }: { id: string }) {
       // Never hijack "?" while the user is writing a note or a question.
       if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable)) return;
       if (e.key === "?") { e.preventDefault(); setHelpOpen(true); }
+      if (e.key === "Escape") setTool("select");
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
@@ -150,6 +170,45 @@ export function CanvasShell({ id }: { id: string }) {
     })();
   }, [doc, centre, update]);
 
+  const onSelectionStart = useCallback((e: React.MouseEvent) => {
+    const startX = e.clientX;
+    const move = (m: MouseEvent) => setCrossing(m.clientX < startX);
+    const up = () => { document.removeEventListener("mousemove", move); document.removeEventListener("mouseup", up); setCrossing(false); };
+    document.addEventListener("mousemove", move);
+    document.addEventListener("mouseup", up);
+  }, []);
+
+  useEffect(() => {
+    // clientWidth, not innerWidth: the latter can grow with the shell's own
+    // min-width. The observer catches sizes a resize event reports too early.
+    const html = document.documentElement;
+    const measure = () => setWinW(html.clientWidth);
+    const ro = new ResizeObserver(measure);
+    measure();
+    ro.observe(html);
+    window.addEventListener("resize", measure);
+    return () => { ro.disconnect(); window.removeEventListener("resize", measure); };
+  }, []);
+  // The board gets its minimum width first. As the window narrows the rail
+  // hides, then the right panel; both come back once there is room again —
+  // unless the user closed them.
+  const railAutoHidden = useRef(false);
+  const panelAutoHidden = useRef(false);
+  useEffect(() => {
+    const fits = winW >= MIN_BOARD + panelW;
+    if (!fits && panelOpen) { panelAutoHidden.current = true; setPanelOpen(false); }
+    else if (fits && panelAutoHidden.current) { panelAutoHidden.current = false; setPanelOpen(true); }
+    // Only on resize: a panel the user opens in a narrow window floats instead.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [winW]);
+  useEffect(() => {
+    const fits = winW >= MIN_BOARD + railW + (panelOpen || panelAutoHidden.current ? panelW : 0);
+    if (!fits && railOpen) { railAutoHidden.current = true; setRailOpen(false); }
+    else if (fits && railAutoHidden.current) { railAutoHidden.current = false; setRailOpen(true); }
+    // Opening the right panel also makes room by tucking the rail away.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [winW, panelOpen]);
+
   // ---- React Flow change plumbing ----
   const onNodesChange = useCallback((changes: NodeChange[]) => {
     const undoable = changes.some((c) => c.type === "remove");
@@ -166,9 +225,9 @@ export function CanvasShell({ id }: { id: string }) {
     if (!doc || !c.source || !c.target) return;
     const { source, target } = c;
     api.addEdge({ canvasId: doc.id, sourceObjectId: source, targetObjectId: target, edgeType: "RELATED_TO" })
-      .then(({ edge }) => update((d) => ({ ...d, edges: [...d.edges, toEdge(edge.id, source, target, "RELATED_TO", "USER")] })))
+      .then(({ edge }) => update((d) => ({ ...d, edges: [...d.edges, { ...toEdge(edge.id, source, target, "RELATED_TO", "USER"), ...connectorStyle(connector) }] })))
       .catch(fail("Linking"));
-  }, [doc, update, fail]);
+  }, [doc, update, fail, connector]);
 
   // ---- creating things ----
   const addPaper = useCallback(async (p: PaperPreview, at?: { x: number; y: number }) => {
@@ -383,6 +442,7 @@ export function CanvasShell({ id }: { id: string }) {
         ...d.nodes.map((n) => (selectedIds.has(n.id) ? { ...n, parentNode: g.id, extent: "parent" as const, position: { x: n.position.x - box.x, y: n.position.y - box.y }, selected: false } : n)),
       ],
     }));
+    setTool("select");
   }, [doc, selected, selectedIds, update, say]);
 
   // Compress: stack the selection into a pile of papers. Each card sits a few
@@ -722,36 +782,57 @@ export function CanvasShell({ id }: { id: string }) {
     { id: "fit", label: "Fit canvas", run: () => flow.fitView({ padding: 0.2, duration: 300 }) },
   ], [addNote, fail, flow]);
 
-  if (!doc) return <div className="shell"><Sidebar currentId={id} onSearch={() => setPalette({ open: true })} /><div className="main"><div className="empty" style={{ marginTop: 80 }}>{doc === null ? "Canvas not found." : <span className="spinner" style={{ display: "inline-block" }} />}</div></div></div>;
+  // Below the width the open panels need, the rail tucks itself away; the
+  // shell's min-width keeps the board usable if the user reopens it anyway.
+  const panelWidth = tab === "Details" && detail ? Math.max(panelW, 420) : panelW;
+  // A panel opened in a window too narrow to dock it floats over the board
+  // instead of squeezing it.
+  const panelOverlay = panelOpen && winW < MIN_BOARD + panelWidth;
+  const panelEff = panelOpen && !panelOverlay ? panelWidth : 0;
+  const railOverlay = railOpen && winW < MIN_BOARD + railW + panelEff;
+  const railEff = railOpen && !railOverlay ? railW : 0;
+  const rail = (
+    <Dock side="left" overlay={railOverlay} open={railOpen} onOpen={(o) => { railAutoHidden.current = false; setRailOpen(o); }} width={railW} onWidth={setRailW} max={winW - MIN_BOARD - panelEff}>
+      <Sidebar currentId={id} onSearch={() => setPalette({ open: true })} />
+    </Dock>
+  );
+
+  if (!doc) return <div className="shell">{rail}<div className="main"><div className="empty" style={{ marginTop: 80 }}>{doc === null ? "Canvas not found." : <span className="spinner" style={{ display: "inline-block" }} />}</div></div></div>;
 
   const real = nodes.filter((n) => n.type !== "suggestion");
   const detailEdges = detail ? edges.filter((e) => e.source === detail.id || e.target === detail.id).map((e) => { const other = byId(e.source === detail.id ? e.target : e.source); return { id: e.id, label: e.data?.edgeType ?? "", title: other?.data.object.title ?? String(other?.data.object.content.text ?? "").slice(0, 40) }; }) : [];
 
   return (
     <BoardActionsContext.Provider value={actions}>
-      <div className="shell">
-        <Sidebar currentId={id} onSearch={() => setPalette({ open: true })} />
+      <div className="shell" style={{ minWidth: MIN_BOARD + railEff + panelEff }}>
+        {rail}
         <div className="main">
           <header className="topbar">
             <input className="topbar-title" value={doc.title} aria-label="Canvas title" onChange={(e) => update((d) => ({ ...d, title: e.target.value }), false)} />
             <span className="hint">{saved ? "Saved" : "Saving…"}</span>
             <div className="grow" />
             <div className="zoom" aria-label="Zoom">
-              <button onClick={() => flow.zoomOut()} aria-label="Zoom out">−</button>
+              <button onClick={() => flow.zoomOut({ duration: 200 })} aria-label="Zoom out">−</button>
               <button onClick={() => flow.fitView({ padding: 0.2, duration: 300 })} title="Fit canvas">{Math.round(zoom * 100)}%</button>
-              <button onClick={() => flow.zoomIn()} aria-label="Zoom in">+</button>
+              <button onClick={() => flow.zoomIn({ duration: 200 })} aria-label="Zoom in">+</button>
             </div>
             <button className="btn" onClick={() => { navigator.clipboard?.writeText(location.href); say("Link copied"); }}>Share</button>
-            <button className="btn" aria-pressed={panelOpen} onClick={() => setPanelOpen(!panelOpen)} title="Toggle panel">▥</button>
+            <button className="btn icon" title="Help (?)" aria-label="Help" onClick={() => setHelpOpen(true)}><HelpIcon /></button>
           </header>
           <div className="work">
-            <div className="board" ref={boardRef} onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); addFiles(e.dataTransfer.files, flow.screenToFlowPosition({ x: e.clientX, y: e.clientY })); }}>
+            <div className={`board tool-${tool} conn-${connector}${crossing ? " crossing" : ""}${connecting ? " connecting" : ""}`} ref={boardRef} onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); addFiles(e.dataTransfer.files, flow.screenToFlowPosition({ x: e.clientX, y: e.clientY })); }}>
               <ReactFlow
                 nodes={nodes}
                 edges={edges}
                 nodeTypes={nodeTypes}
                 panOnDrag={tool === "pan" ? true : [1, 2]}
-                selectionOnDrag={tool === "select"}
+                selectionOnDrag={tool === "select" || tool === "group"}
+                nodesDraggable={tool !== "connect"}
+                connectionMode={tool === "connect" ? ConnectionMode.Loose : ConnectionMode.Strict}
+                selectionMode={crossing ? SelectionMode.Partial : SelectionMode.Full}
+                onSelectionStart={onSelectionStart}
+                onConnectStart={() => setConnecting(true)}
+                onConnectEnd={() => setConnecting(false)}
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
                 onNodeDragStart={onNodeDragStart}
@@ -760,7 +841,7 @@ export function CanvasShell({ id }: { id: string }) {
                 onNodeContextMenu={(e, n) => { e.preventDefault(); setMenu({ id: n.id, x: e.clientX, y: e.clientY }); }}
                 // Double-click opens the full centred viewer; groups just expand in place.
                 onNodeDoubleClick={(_, n) => { if (n.type !== "group") setLightboxId(n.id); }}
-                onPaneClick={() => { setMenu(null); setDetailId(null); }}
+                onPaneClick={() => { setMenu(null); setDetailId(null); if (panelOverlay) setPanelOpen(false); if (railOverlay) setRailOpen(false); }}
                 deleteKeyCode={["Backspace", "Delete"]}
                 multiSelectionKeyCode="Shift"
                 panOnScroll
@@ -770,11 +851,7 @@ export function CanvasShell({ id }: { id: string }) {
                 snapToGrid
                 snapGrid={[12, 12]}
                 proOptions={{ hideAttribution: true }}
-                defaultEdgeOptions={{
-                  type: connector === "line" ? "straight" : "default",
-                  markerEnd: connector === "line" ? undefined : { type: MarkerType.ArrowClosed, width: 16, height: 16, color: "#c7c7cc" },
-                  markerStart: connector === "biarrow" ? { type: MarkerType.ArrowClosed, width: 16, height: 16, color: "#c7c7cc" } : undefined,
-                }}
+                defaultEdgeOptions={connectorStyle(connector)}
               >
                 <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="var(--dot)" />
                 {real.length > 3 && <MiniMap pannable zoomable style={{ width: 150, height: 96 }} nodeColor={(n) => (n.type === "paper" ? "#d2d2d7" : n.type === "ai" ? "#9ec8f5" : "#e8e8ea")} maskColor="rgba(251,251,252,0.7)" />}
@@ -798,15 +875,22 @@ export function CanvasShell({ id }: { id: string }) {
                     </div>
                   )}
                 </div>
-                <button className="tool" title="Group selection (⌘G)" onClick={groupSelection}><GroupIcon /></button>
+                <button className={`tool${tool === "group" ? " on" : ""}`} title="Group — select objects to group (⌘G groups now)" aria-pressed={tool === "group"} onClick={() => setTool(tool === "group" ? "select" : "group")}><GroupIcon /></button>
                 <span className="tool-sep" />
-                <button className={`tool${connector === "line" ? " on" : ""}`} title="Connector: straight line" aria-pressed={connector === "line"} onClick={() => setConnector("line")}><LineIcon /></button>
-                <button className={`tool${connector === "arrow" ? " on" : ""}`} title="Connector: arrow (one direction)" aria-pressed={connector === "arrow"} onClick={() => setConnector("arrow")}><ArrowIcon /></button>
-                <button className={`tool${connector === "biarrow" ? " on" : ""}`} title="Connector: arrow (both directions)" aria-pressed={connector === "biarrow"} onClick={() => setConnector("biarrow")}><BiArrowIcon /></button>
+                <button className={`tool${tool === "connect" && connector === "line" ? " on" : ""}`} title="Line — drag between objects" aria-pressed={tool === "connect" && connector === "line"} onClick={() => { setConnector("line"); setTool("connect"); }}><LineIcon /></button>
+                <button className={`tool${tool === "connect" && connector === "arrow" ? " on" : ""}`} title="Arrow — drag between objects" aria-pressed={tool === "connect" && connector === "arrow"} onClick={() => { setConnector("arrow"); setTool("connect"); }}><ArrowIcon /></button>
+                <button className={`tool${tool === "connect" && connector === "biarrow" ? " on" : ""}`} title="Two-way arrow — drag between objects" aria-pressed={tool === "connect" && connector === "biarrow"} onClick={() => { setConnector("biarrow"); setTool("connect"); }}><BiArrowIcon /></button>
                 <span className="tool-sep" />
                 <button className="tool accent" title="Ask AI" onClick={() => { setPanelOpen(true); setTab("Chat"); }}><SparkIcon /></button>
               </div>
-              <button className="help-fab" title="Help — what everything does (?)" aria-label="Help" onClick={() => setHelpOpen(true)}><HelpIcon /></button>
+              {tool === "group" && (
+                <div className="group-prompt popover" role="status">
+                  {selected.length < 2
+                    ? <span>Select objects to group</span>
+                    : <><span>Group {selected.length} objects?</span><button className="btn primary sm" onClick={groupSelection}>Group</button></>}
+                  <button className="btn sm" onClick={() => setTool("select")}>Cancel</button>
+                </div>
+              )}
               {real.length === 0 && <EmptyState onSearch={() => setPalette({ open: true })} onUpload={() => fileInput.current?.click()} onDrop={addFiles} />}
               <form className="chatbar" onSubmit={(e) => { e.preventDefault(); setPanelOpen(true); setTab("Chat"); send(); }}>
                 {partial && <div className="chat-partial">{partial}</div>}
@@ -822,9 +906,9 @@ export function CanvasShell({ id }: { id: string }) {
             {lightboxId && byId(lightboxId) && (
               <Lightbox node={byId(lightboxId)!} pdfUrl={actions.pdfUrl(lightboxId)} onClose={() => setLightboxId(null)} />
             )}
-            {panelOpen && (
+            <Dock side="right" overlay={panelOverlay} open={panelOpen} onOpen={(o) => { panelAutoHidden.current = false; setPanelOpen(o); }} width={panelWidth} onWidth={setPanelW} max={winW - MIN_BOARD - railEff}>
               <SidePanel
-                tab={tab} onTab={setTab} wide={tab === "Details" && !!detail}
+                tab={tab} onTab={setTab}
                 nodes={nodes} selectedIds={selectedIds} onFocus={focusNode}
                 details={detail ? (
                   <Viewer
@@ -843,7 +927,7 @@ export function CanvasShell({ id }: { id: string }) {
                   />
                 }
               />
-            )}
+            </Dock>
           </div>
         </div>
       </div>
