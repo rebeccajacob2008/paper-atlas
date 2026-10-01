@@ -73,7 +73,7 @@ a:hover { color: var(--accent-hover); }
 
 /* ---- app shell (2a) ---- */
 .shell { display: flex; height: 100vh; overflow: hidden; }
-.rail { width: 216px; flex: none; border-right: 1px solid var(--line); background: var(--surface-2); display: flex; flex-direction: column; }
+.rail { width: 100%; height: 100%; border-right: 1px solid var(--line); background: var(--surface-2); display: flex; flex-direction: column; }
 .rail-head { height: 46px; display: flex; align-items: center; gap: 8px; padding: 0 14px; border-bottom: 1px solid var(--line-2); font-weight: 590; letter-spacing: -0.01em; }
 .rail-body { padding: 12px 12px 0; display: flex; flex-direction: column; gap: 10px; flex: 1; min-height: 0; }
 .rail-search { height: 28px; border-radius: 7px; background: var(--fill); display: flex; align-items: center; padding: 0 9px; gap: 7px; color: var(--ink-4); font-size: 12px; width: 100%; text-align: left; }
@@ -125,11 +125,9 @@ a:hover { color: var(--accent-hover); }
 .chatbar .mic[aria-pressed="true"] { color: #c62828; }
 
 /* docked right panel */
-.panel { width: 300px; flex: none; border-left: 1px solid var(--line); background: var(--surface); display: flex; flex-direction: column; min-height: 0; }
-.panel.wide { width: 420px; }
+.panel { width: 100%; height: 100%; border-left: 1px solid var(--line); background: var(--surface); display: flex; flex-direction: column; min-height: 0; }
 .panel-body { flex: 1; overflow: auto; min-height: 0; }
 .panel-foot { border-top: 1px solid var(--line-2); padding: 8px 12px; font-size: 11px; color: var(--ink-5); }
-.panel-toggle { position: absolute; right: 12px; top: 12px; z-index: 5; }
 
 /* navigator (2j) */
 .nav-filters { display: flex; flex-wrap: wrap; gap: 5px; padding: 0 12px 10px; }
@@ -177,7 +175,7 @@ a:hover { color: var(--accent-hover); }
 .node.suggestion .verdict .more { margin-left: auto; font-size: 10px; color: var(--accent); width: auto; padding: 0 6px; }
 .group-node { width: 100%; height: 100%; border: 1px dashed var(--accent-line); border-radius: 12px; background: rgba(0, 113, 227, 0.04); position: relative; }
 .group-node .label { position: absolute; left: 8px; top: -8px; background: var(--board); padding: 0 5px; }
-.react-flow__node-group { z-index: -1 !important; }
+.board .react-flow__node-group { z-index: -1 !important; border: 0; padding: 0; background: none; border-radius: 12px; box-shadow: none !important; }
 .react-flow__node-group.selected .group-node { border-style: solid; }
 
 /* context menu (2h left) */
@@ -268,7 +266,7 @@ a:hover { color: var(--accent-hover); }
 .modal-head { padding: 12px 14px; border-bottom: 1px solid var(--line-2); display: flex; align-items: center; }
 .modal-body { overflow: auto; padding: 6px; flex: 1; }
 
-.toast { position: fixed; bottom: 70px; left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; border-radius: 8px; padding: 7px 12px; font-size: 12px; z-index: 70; box-shadow: var(--shadow-3); }
+.toast { position: fixed; bottom: 70px; left: 50%; translate: -50% 0; background: var(--ink); color: #fff; border-radius: 8px; padding: 7px 12px; font-size: 12px; z-index: 70; box-shadow: var(--shadow-3); }
 
 .citelist { list-style: none; margin: 0; padding: 6px 14px 12px; display: grid; gap: 10px; }
 .citelist li { border-bottom: 1px solid var(--line-2); padding-bottom: 8px; }
@@ -424,10 +422,6 @@ a:hover { color: var(--accent-hover); }
 .help-row:last-child { border-bottom: 0; }
 .help-row dt { font-size: 12px; font-weight: 560; color: var(--ink); }
 .help-row dd { margin: 0; font-size: 12px; line-height: 1.45; color: var(--ink-3); }
-.help-fab { position: absolute; right: 16px; bottom: 16px; width: 30px; height: 30px; border-radius: 999px;
-  background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow-2);
-  color: var(--ink-3); font-size: 14px; cursor: pointer; z-index: 8; }
-.help-fab:hover { color: var(--ink); background: var(--bg-2); }
 
 /* ---- Toolbar: one weight, one size, clear grouping --------------------- */
 .tools { gap: 2px; padding: 5px; }
@@ -457,7 +451,7 @@ a:hover { color: var(--accent-hover); }
   border: 2px dashed var(--accent); background: rgba(0,113,227,0.04); }
 
 /* ---- Chat bar: compact and rounded, like a command bar ----------------- */
-.chatbar { width: min(440px, 52vw); padding: 10px 10px 10px 18px; border-radius: 22px; gap: 10px; }
+.chatbar { width: min(440px, calc(100% - 140px)); padding: 10px 10px 10px 18px; border-radius: 22px; gap: 10px; }
 .chatbar input { font-size: 13.5px; }
 .chatbar .voice { width: 30px; height: 30px; border-radius: 999px; display: grid; place-items: center;
   color: var(--ink-4); background: transparent; border: 0; cursor: pointer; flex: none; }
@@ -596,3 +590,77 @@ a:hover { color: var(--accent-hover); }
 .stickypad .pad-count { position: absolute; inset: 0; display: grid; place-items: center;
   font-size: 11px; font-weight: 600; color: #7a5c00; }
 .stickypad:hover { transform: translateX(2px); transition: transform 0.12s; }
+
+/* ---- Side docks with pull tabs ----------------------------------------- */
+.dock { position: relative; flex: none; height: 100%; transition: width 240ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+.dock.resizing { transition: none; }
+/* Too narrow to dock: the panel floats over the board rather than shrinking it. */
+.shell, .work { position: relative; }
+.dock.floating { position: absolute; top: 0; bottom: 0; z-index: 40; box-shadow: var(--shadow-3); }
+.dock-left.floating { left: 0; }
+.dock-right.floating { right: 0; }
+.dock-clip { position: relative; width: 100%; height: 100%; overflow: hidden; }
+/* Content keeps its width and slides out under the clip instead of reflowing. */
+.dock-inner { position: absolute; top: 0; bottom: 0; }
+.dock-left .dock-inner { right: 0; }
+.dock-right .dock-inner { left: 0; }
+.pull-tab { position: absolute; top: 50%; width: 14px; height: 56px; margin-top: -28px; z-index: 20;
+  cursor: col-resize; display: grid; place-items: center; touch-action: none; }
+.dock-left .pull-tab { right: -14px; }
+.dock-right .pull-tab { left: -14px; }
+.pull-tab::before { content: ""; width: 4px; height: 36px; border-radius: 999px; background: var(--bar);
+  transition: background 0.15s, height 0.2s ease; }
+.pull-tab:hover::before, .dock.resizing .pull-tab::before { background: var(--ink-4); height: 48px; }
+/* Closed: the tab becomes a small grip on the board edge so it is still findable. */
+.dock.closed .pull-tab { cursor: e-resize; }
+.dock-right.closed .pull-tab { cursor: w-resize; }
+.dock.closed .pull-tab::before { width: 5px; background: var(--ink-5); }
+
+/* ---- Cursors: say what a press will do --------------------------------- */
+.board { --conn-cursor: crosshair; }
+.board .react-flow__pane, .board .react-flow__pane.selection { cursor: default; }
+.board.tool-group .react-flow__pane { cursor: crosshair; }
+.board.tool-pan .react-flow__pane { cursor: grab; }
+.board .react-flow__pane.dragging { cursor: grabbing; }
+.board .react-flow__node { cursor: default; }
+.board .react-flow__node.dragging, .board .react-flow__nodesselection-rect:active { cursor: grabbing; }
+.board .react-flow__nodesselection-rect { cursor: move; }
+.board .react-flow__node :is(textarea, input, [contenteditable="true"]) { cursor: text; }
+.board .react-flow__handle, .board .react-flow__handle.connectionindicator { cursor: var(--conn-cursor); }
+.board.connecting, .board.connecting *,
+.board.tool-connect .react-flow__pane, .board.tool-connect .react-flow__node,
+.board.tool-connect .react-flow__node * { cursor: var(--conn-cursor) !important; }
+/* Line tools: the whole object is a connection point, so a link can start
+   and end anywhere on it, not just on the small side dots. */
+.board.tool-connect .react-flow__handle { inset: 0; width: auto; height: auto; transform: none;
+  border: 0; border-radius: inherit; background: transparent; opacity: 0; z-index: 10; }
+.board.tool-connect .react-flow__node:hover .node, .board.tool-connect .react-flow__handle.connectingto { box-shadow: 0 0 0 2px var(--accent-line); }
+/* Connector cursors: a crosshair with the chosen line style beside it. */
+.board.conn-line { --conn-cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='none' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 1v12M1 7h12M13 21L22 12' stroke='white' stroke-width='3.5'/%3E%3Cpath d='M7 1v12M1 7h12M13 21L22 12' stroke='black' stroke-width='1.5'/%3E%3C/svg%3E") 7 7, crosshair; }
+.board.conn-arrow { --conn-cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='none' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 1v12M1 7h12M13 21L22 12M17 12h5v5' stroke='white' stroke-width='3.5'/%3E%3Cpath d='M7 1v12M1 7h12M13 21L22 12M17 12h5v5' stroke='black' stroke-width='1.5'/%3E%3C/svg%3E") 7 7, crosshair; }
+.board.conn-biarrow { --conn-cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='none' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 1v12M1 7h12M13 21L22 12M17 12h5v5M13 16v5h5' stroke='white' stroke-width='3.5'/%3E%3Cpath d='M7 1v12M1 7h12M13 21L22 12M17 12h5v5M13 16v5h5' stroke='black' stroke-width='1.5'/%3E%3C/svg%3E") 7 7, crosshair; }
+
+/* Right→left marquee selects anything it touches; dashed so the mode is visible. */
+.board.crossing .react-flow__selection { border-style: dashed; border-color: #34c759; background: rgba(52, 199, 89, 0.07); }
+
+/* Group mode prompt, floating above the board. */
+.group-prompt { position: absolute; top: 14px; left: 50%; translate: -50% 0; z-index: 9;
+  display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 12px; font-size: 12px; color: var(--ink-2); border-radius: 10px; }
+
+/* ---- Motion: short, quiet, and never in the way ------------------------ */
+@keyframes pop-in { from { opacity: 0; transform: translateY(4px) scale(0.98); } }
+@keyframes fade-in { from { opacity: 0; } }
+.popover, .lightbox-panel, .help-panel, .onboard, .toast { animation: pop-in 150ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+.overlay, .lightbox { animation: fade-in 160ms ease-out; }
+.msg { animation: pop-in 180ms ease-out; }
+.react-flow__node { animation: fade-in 180ms ease-out; }
+.tab { transition: color 0.15s, border-color 0.15s; }
+.btn, .chip, .menu-item, .nav-item, .rail-item, .rail-new, .zoom > button, .tag, .result, .chatbar button { transition: background 0.12s, color 0.12s, border-color 0.12s; }
+.board .react-flow__edge-path { transition: stroke 0.15s; }
+.chatbar { transition: box-shadow 0.15s, border-color 0.15s, width 0.24s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.chatbar:focus-within { border-color: var(--accent-line); box-shadow: var(--shadow-3); }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; }
+}
+.btn.icon { padding: 3px 5px; color: var(--ink-3); }
+.btn.icon:hover { color: var(--ink); }

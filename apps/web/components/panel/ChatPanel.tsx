@@ -29,15 +29,14 @@ export function ChatPanel({ messages, contextTitles, busy, draft, onDraft, onSen
           {contextTitles.length} pinned
         </button>
         <div className="grow" />
-        <button className="btn sm" disabled={messages.length === 0} onClick={onSaveThread}>Save thread as node</button>
+        <button className="btn sm" disabled={messages.length === 0} onClick={onSaveThread}>Save as node</button>
       </div>
-      {showCtx && (
+      {showCtx && contextTitles.length > 0 && (
         <div style={{ padding: "6px 12px", borderBottom: "1px solid var(--line-2)" }} className="hint">
-          {contextTitles.length ? contextTitles.map((t, i) => <div key={i}>• {t}</div>) : "Select nodes on the board to pin them as context."}
+          {contextTitles.map((t, i) => <div key={i}>• {t}</div>)}
         </div>
       )}
       <div className="chat-log" ref={log}>
-        {messages.length === 0 && <div className="empty">Ask about the canvas. Selected nodes are sent as context.</div>}
         {messages.map((m) => (
           <div key={m.id} className={`msg ${m.role}`}>
             {m.text}

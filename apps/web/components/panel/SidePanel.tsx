@@ -11,20 +11,20 @@ const FILTERS: [string, NodeKind[] | null][] = [
   ["All", null], ["Papers", ["paper", "pdf"]], ["Notes", ["note"]], ["Excerpts", ["excerpt"]], ["Threads", ["thread"]], ["AI", ["ai"]], ["Groups", ["group"]],
 ];
 
-export function SidePanel({ tab, onTab, wide, details, chat, nodes, selectedIds, onFocus }: {
-  tab: PanelTab; onTab: (t: PanelTab) => void; wide: boolean;
+export function SidePanel({ tab, onTab, details, chat, nodes, selectedIds, onFocus }: {
+  tab: PanelTab; onTab: (t: PanelTab) => void;
   details: ReactNode; chat: ReactNode;
   nodes: Node<NodeData>[]; selectedIds: Set<string>; onFocus: (id: string) => void;
 }) {
   return (
-    <aside className={`panel${wide ? " wide" : ""}`} aria-label="Panel">
+    <aside className="panel" aria-label="Panel">
       <div className="tabs" role="tablist">
         {(["Objects", "Details", "Chat"] as PanelTab[]).map((t) => (
           <button key={t} role="tab" className="tab" aria-selected={tab === t} onClick={() => onTab(t)}>{t}</button>
         ))}
       </div>
       {tab === "Objects" && <Navigator nodes={nodes} selectedIds={selectedIds} onFocus={onFocus} />}
-      {tab === "Details" && (details ?? <div className="empty">Select an object to see its details.</div>)}
+      {tab === "Details" && (details ?? <div className="empty">Nothing selected</div>)}
       {tab === "Chat" && chat}
     </aside>
   );
@@ -95,7 +95,6 @@ function Navigator({ nodes, selectedIds, onFocus }: { nodes: Node<NodeData>[]; s
           );
         })}
       </div>
-      <div className="panel-foot">Click an item to fly to it</div>
     </>
   );
 }
